@@ -7,6 +7,11 @@ import { CubeTimeline, LOOP_NODES, type LoopMode } from "./lib/cldMotion";
 
 const createTimelines = () => LOOP_NODES.map((_, index) => new CubeTimeline(index));
 
+// Length of the opening unfold. The .is-intro timeline in index.css is written
+// against this value: every staged animation has to be finished by the time the
+// class is dropped, otherwise the scene would jump to its resting pose.
+const INTRO_DURATION = 2000;
+
 const createBalancingPolarities = () => {
   const negativeCount = Math.random() < 0.5 ? 1 : 3;
   const negativeIndices = new Set<number>();
@@ -45,12 +50,22 @@ export default function App() {
   const { time, playing, toggle, play, restart } = useSceneClock();
   const [timelines, setTimelines] = useState(createTimelines);
   const [, refresh] = useState(0);
+  const [introRun, setIntroRun] = useState(0);
+  const [introFinished, setIntroFinished] = useState(false);
   const [loopMode, setLoopMode] = useState<LoopMode>("balancing");
   const [colorTheme, setColorTheme] = useState<ColorTheme>("orange");
   const [modeStartedAt, setModeStartedAt] = useState(0);
   const [negativeEdges, setNegativeEdges] = useState<boolean[]>(createBalancingPolarities);
   const [aboutOpen, setAboutOpen] = useState(false);
   const closeAbout = useCallback(() => setAboutOpen(false), []);
+
+  // Play the opening unfold on load and again on every reset. Re-keying the page
+  // remounts the scene so the staged animations restart from the first frame.
+  useEffect(() => {
+    setIntroFinished(false);
+    const timer = window.setTimeout(() => setIntroFinished(true), INTRO_DURATION);
+    return () => window.clearTimeout(timer);
+  }, [introRun]);
 
   useEffect(() => {
     const metaThemeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
@@ -72,6 +87,10 @@ export default function App() {
     setLoopMode("balancing");
     setModeStartedAt(0);
     setNegativeEdges(createBalancingPolarities());
+    // Set the flag in the same batch as the new key so the reset never shows a
+    // frame of the finished scene before the unfold replays.
+    setIntroFinished(false);
+    setIntroRun((run) => run + 1);
     restart();
   }, [restart]);
 
@@ -87,7 +106,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!playing || loopMode !== "balancing") return;
+    if (!playing || loopMode !== "balancing" || !introFinished) return;
 
     const timer = window.setTimeout(() => {
       // Flip a random pair together to preserve the odd negative count of a B loop.
@@ -104,7 +123,7 @@ export default function App() {
     }, 1250 + Math.random() * 1350);
 
     return () => window.clearTimeout(timer);
-  }, [loopMode, negativeEdges, playing]);
+  }, [loopMode, negativeEdges, playing, introFinished]);
 
   const flipNode = (index: number) => {
     timelines[index].flip(time);
@@ -130,7 +149,16 @@ export default function App() {
   }, [aboutOpen, toggle, resetScene]);
 
   return (
-    <div className={`cld-page ${playing ? "is-playing" : "is-paused"} mode-${loopMode} theme-${colorTheme}`}>
+    <div
+      key={introRun}
+      className={[
+        "cld-page",
+        playing ? "is-playing" : "is-paused",
+        ...(introFinished ? [] : ["is-intro"]),
+        `mode-${loopMode}`,
+        `theme-${colorTheme}`,
+      ].join(" ")}
+    >
       <div className="scene-wash" aria-hidden="true" />
       <div className="floor-grid" aria-hidden="true" />
 

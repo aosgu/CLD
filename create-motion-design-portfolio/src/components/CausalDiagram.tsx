@@ -67,25 +67,30 @@ export default function CausalDiagram({
       <div className="diagram">
         <svg className="loop-paths" viewBox="0 0 720 720" fill="none" aria-hidden="true">
           <defs>
-            <marker
-              id="cld-arrowhead"
-              viewBox="0 0 10 10"
-              refX="8.2"
-              refY="5"
-              markerWidth="6.5"
-              markerHeight="6.5"
-              orient="auto"
-            >
-              <path d="M 1 1 L 9 5 L 1 9 L 3.4 5 Z" fill="currentColor" />
-            </marker>
+            {/* One marker per arc: the opening unfold pops each head in on its own delay. */}
+            {ARROWS.map((_, index) => (
+              <marker
+                key={`cld-arrowhead-${index + 1}`}
+                id={`cld-arrowhead-${index + 1}`}
+                viewBox="0 0 10 10"
+                refX="8.2"
+                refY="5"
+                markerWidth="6.5"
+                markerHeight="6.5"
+                orient="auto"
+              >
+                <path className="loop-arrowhead" d="M 1 1 L 9 5 L 1 9 L 3.4 5 Z" fill="currentColor" />
+              </marker>
+            ))}
           </defs>
           <circle className="orbit-guide" cx="360" cy="360" r="236" />
           {ARROWS.map((path, index) => (
-            <g key={path}>
+            <g key={path} className="loop-segment">
               <path
                 className="loop-arrow"
                 d={path}
-                markerEnd="url(#cld-arrowhead)"
+                pathLength="100"
+                markerEnd={`url(#cld-arrowhead-${index + 1})`}
                 vectorEffect="non-scaling-stroke"
               />
               <path
