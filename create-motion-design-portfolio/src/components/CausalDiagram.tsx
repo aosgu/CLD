@@ -1,4 +1,4 @@
-import type { CubeFrame, PolarityFrame } from "../lib/cldMotion";
+import type { CubeFrame, LoopMode } from "../lib/cldMotion";
 import { LOOP_NODES } from "../lib/cldMotion";
 import CubeNode from "./CubeNode";
 
@@ -12,23 +12,57 @@ const arc = (start: number, end: number) => {
 
 const ARROWS = [arc(-70, -20), arc(20, 70), arc(110, 160), arc(200, 250)];
 
+const acceleratedTravel = (elapsed: number) => {
+  const timeConstant = 2.4;
+  const addedSpeed = 52;
+  return 23 * elapsed + addedSpeed * (elapsed - timeConstant * (1 - Math.exp(-elapsed / timeConstant)));
+};
+
+const POLARITY_LINKS = [
+  { id: "cause-effect", label: "原因到影响", x: 73.178, y: 26.822, rotation: -11 },
+  { id: "effect-response", label: "影响到响应", x: 73.178, y: 73.178, rotation: 11 },
+  { id: "response-feedback", label: "响应到反馈", x: 26.822, y: 73.178, rotation: -11 },
+  { id: "feedback-cause", label: "反馈到原因", x: 26.822, y: 26.822, rotation: 11 },
+] as const;
+
+function PolarityFaces({ negative }: { negative: boolean }) {
+  return (
+    <span
+      className="polarity-card"
+      style={{ transform: `rotateY(${negative ? 180 : 0}deg)` }}
+      aria-hidden="true"
+    >
+      <span className="polarity-face polarity-front">
+        <span className="polarity-sign">+</span>
+      </span>
+      <span className="polarity-face polarity-back">
+        <span className="polarity-sign">−</span>
+      </span>
+    </span>
+  );
+}
+
 interface CausalDiagramProps {
   time: number;
   frames: CubeFrame[];
-  polarity: PolarityFrame;
+  mode: LoopMode;
+  modeElapsed: number;
+  negativeEdges: boolean[];
   onFlipNode: (index: number) => void;
-  onFlipPolarity: () => void;
 }
 
 export default function CausalDiagram({
-  time, frames, polarity, onFlipNode, onFlipPolarity,
+  time, frames, mode, modeElapsed, negativeEdges, onFlipNode,
 }: CausalDiagramProps) {
+  const signalTravel = mode === "reinforcing" ? acceleratedTravel(modeElapsed) : time * 23;
+
   return (
     <section className="diagram-region" aria-label="交互式三维因果回路图">
       <p className="sr-only">
         原因、影响、响应和反馈四个黑色立方体，分别位于上、右、下、左。
-        四条箭头按顺时针方向连成一个回路。三条关系固定为正向，
-        右上方的双面卡片在正向与反向关系之间翻转。点击立方体可改变展示视角。
+        四条箭头按顺时针方向连成一个回路，每条连线上都有一张只显示正号或负号的极性卡片。
+        平衡回路中卡片成对随机翻转并保持奇数个负号；增强回路中所有关系均为正向。
+        点击立方体可改变展示视角。
       </p>
       <div className="diagram">
         <svg className="loop-paths" viewBox="0 0 720 720" fill="none" aria-hidden="true">
@@ -58,31 +92,31 @@ export default function CausalDiagram({
                 className="loop-signal"
                 d={path}
                 pathLength="100"
-                strokeDasharray="7 100"
-                strokeDashoffset={-time * 23 - index * 26}
+                strokeDasharray={mode === "reinforcing" ? "0.7 7.3" : "7 100"}
+                strokeDashoffset={-signalTravel - index * (mode === "reinforcing" ? 7.5 : 26)}
                 vectorEffect="non-scaling-stroke"
               />
             </g>
           ))}
-          <g className="fixed-polarities">
-            <text x="510" y="515">+</text>
-            <text x="210" y="515">+</text>
-            <text x="210" y="215">+</text>
-          </g>
         </svg>
 
-        <div className="loop-center" aria-hidden="true">
+        <div className={`loop-center loop-center-${mode}`} aria-hidden="true">
           <div className="loop-type-mask">
-            <span key={polarity.negative ? "B" : "R"} className="loop-type">
-              {polarity.negative ? "B" : "R"}
+            <span key={mode} className="loop-type">
+              {mode === "balancing" ? "B" : "R"}
             </span>
           </div>
           <div className="loop-name-mask">
-            <span key={String(polarity.negative)} className="loop-name mono">
-              {polarity.negative ? "BALANCING" : "REINFORCING"}
+            <span key={mode} className="loop-name mono">
+              {mode === "balancing" ? "BALANCING" : "REINFORCING"}
             </span>
           </div>
-          <span className="loop-chinese">{polarity.negative ? "平衡回路" : "增强回路"}</span>
+          <span key={`${mode}-chinese`} className="loop-chinese">
+            {mode === "balancing" ? "平衡回路" : "增强回路"}
+          </span>
+          <span key={`${mode}-effect`} className="loop-effect">
+            {mode === "balancing" ? "反馈抵消变化" : "反馈放大变化"}
+          </span>
           <span className="loop-center-rule" />
         </div>
 
@@ -97,36 +131,28 @@ export default function CausalDiagram({
           />
         ))}
 
-        <div className="polarity-anchor">
-          <div className="polarity-shadow" />
-          <div className="polarity-perspective">
-            <button
-              type="button"
-              className="polarity-button"
-              onClick={onFlipPolarity}
-              aria-label={`当前为${polarity.negative ? "反向" : "同向"}关系，点击翻转正负关系卡片`}
-              aria-disabled={polarity.flipping}
-              title="点击，翻转关系"
-            >
-              <span
-                className="polarity-card"
-                style={{ transform: `rotateY(${polarity.angle}deg)` }}
-                aria-hidden="true"
+        {POLARITY_LINKS.map((link, index) => (
+          <div
+            key={link.id}
+            className={`polarity-anchor polarity-anchor-${link.id}`}
+            style={{
+              left: `${link.x}%`,
+              top: `${link.y}%`,
+              transform: `translate(-50%, -50%) rotate(${link.rotation}deg)`,
+            }}
+          >
+            <div className="polarity-shadow" />
+            <div className="polarity-perspective">
+              <div
+                className="polarity-static"
+                role="img"
+                aria-label={`${link.label}：${mode === "balancing" && negativeEdges[index] ? "负向关系" : "正向关系"}`}
               >
-                <span className="polarity-face polarity-front">
-                  <span className="polarity-eyebrow mono">POLARITY</span>
-                  <span className="polarity-sign">+</span>
-                  <span className="polarity-direction mono">SAME</span>
-                </span>
-                <span className="polarity-face polarity-back">
-                  <span className="polarity-eyebrow mono">POLARITY</span>
-                  <span className="polarity-sign">-</span>
-                  <span className="polarity-direction mono">OPPOSITE</span>
-                </span>
-              </span>
-            </button>
+                <PolarityFaces negative={mode === "balancing" && negativeEdges[index]} />
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </section>
   );

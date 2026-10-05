@@ -222,28 +222,4 @@ export class CubeTimeline {
   }
 }
 
-export interface PolarityFrame {
-  angle: number;
-  negative: boolean;
-  flipping: boolean;
-  phase: number;
-}
-
-export function samplePolarity(time: number): PolarityFrame {
-  const phase = ((time % 6) + 6) % 6;
-  let angle = 0;
-  if (phase >= 2.3 && phase < 3) {
-    angle = 180 * easeInOutQuint(progress(phase, 2.3, 3));
-  } else if (phase >= 3 && phase < 5.3) {
-    angle = 180;
-  } else if (phase >= 5.3) {
-    angle = 180 * (1 - easeInOutQuint(progress(phase, 5.3, 6)));
-  }
-
-  return {
-    angle,
-    negative: angle > 90,
-    flipping: (phase > 2.3 && phase < 3) || phase > 5.3,
-    phase,
-  };
-}
+export type LoopMode = "balancing" | "reinforcing";
