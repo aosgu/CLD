@@ -3,9 +3,29 @@ import { ArrowUpRight, Pause, Play, RotateCcw } from "lucide-react";
 import CausalDiagram from "./components/CausalDiagram";
 import AboutCLD from "./components/AboutCLD";
 import { useSceneClock } from "./hooks/useSceneClock";
-import { CubeTimeline, LOOP_NODES, samplePolarity } from "./lib/cldMotion";
+import { CubeTimeline, LOOP_NODES, type LoopMode } from "./lib/cldMotion";
 
 const createTimelines = () => LOOP_NODES.map((_, index) => new CubeTimeline(index));
+
+const createBalancingPolarities = () => {
+  const negativeCount = Math.random() < 0.5 ? 1 : 3;
+  const negativeIndices = new Set<number>();
+  while (negativeIndices.size < negativeCount) {
+    negativeIndices.add(Math.floor(Math.random() * LOOP_NODES.length));
+  }
+  return LOOP_NODES.map((_, index) => negativeIndices.has(index));
+};
+
+const createReinforcingPolarities = () => LOOP_NODES.map(() => false);
+
+const COLOR_THEMES = [
+  { id: "orange", label: "橙色", color: "#f64e27" },
+  { id: "blue", label: "蓝色", color: "#4d94e8" },
+  { id: "green", label: "绿色", color: "#6eaf70" },
+  { id: "purple", label: "紫色", color: "#9870d5" },
+] as const;
+
+type ColorTheme = (typeof COLOR_THEMES)[number]["id"];
 
 function LoopMark() {
   return (
@@ -25,12 +45,20 @@ export default function App() {
   const { time, playing, toggle, play, restart } = useSceneClock();
   const [timelines, setTimelines] = useState(createTimelines);
   const [, refresh] = useState(0);
-  const [polarityOffset, setPolarityOffset] = useState(0);
+  const [loopMode, setLoopMode] = useState<LoopMode>("balancing");
+  const [colorTheme, setColorTheme] = useState<ColorTheme>("orange");
+  const [modeStartedAt, setModeStartedAt] = useState(0);
+  const [negativeEdges, setNegativeEdges] = useState<boolean[]>(createBalancingPolarities);
   const [aboutOpen, setAboutOpen] = useState(false);
   const closeAbout = useCallback(() => setAboutOpen(false), []);
 
+  useEffect(() => {
+    const metaThemeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const selectedTheme = COLOR_THEMES.find((option) => option.id === colorTheme);
+    if (metaThemeColor && selectedTheme) metaThemeColor.content = selectedTheme.color;
+  }, [colorTheme]);
+
   const frames = timelines.map((timeline) => timeline.sample(time));
-  const polarity = samplePolarity(time + polarityOffset);
   const activeIndex = frames.reduce(
     (latest, frame, index) => frame.eventAt > frames[latest].eventAt ? index : latest,
     0,
@@ -41,19 +69,46 @@ export default function App() {
 
   const resetScene = useCallback(() => {
     setTimelines(createTimelines());
-    setPolarityOffset(0);
+    setLoopMode("balancing");
+    setModeStartedAt(0);
+    setNegativeEdges(createBalancingPolarities());
     restart();
   }, [restart]);
+
+  const chooseLoopMode = (nextMode: LoopMode) => {
+    if (nextMode === loopMode) return;
+    setLoopMode(nextMode);
+    setModeStartedAt(time);
+    setNegativeEdges(
+      nextMode === "reinforcing"
+        ? createReinforcingPolarities()
+        : createBalancingPolarities(),
+    );
+  };
+
+  useEffect(() => {
+    if (!playing || loopMode !== "balancing") return;
+
+    const timer = window.setTimeout(() => {
+      // Flip a random pair together to preserve the odd negative count of a B loop.
+      const first = Math.floor(Math.random() * negativeEdges.length);
+      const second = (first + 1 + Math.floor(Math.random() * (negativeEdges.length - 1)))
+        % negativeEdges.length;
+
+      setNegativeEdges((current) => {
+        const next = [...current];
+        next[first] = !next[first];
+        next[second] = !next[second];
+        return next;
+      });
+    }, 1250 + Math.random() * 1350);
+
+    return () => window.clearTimeout(timer);
+  }, [loopMode, negativeEdges, playing]);
 
   const flipNode = (index: number) => {
     timelines[index].flip(time);
     refresh((value) => value + 1);
-    play();
-  };
-
-  const flipPolarity = () => {
-    if (polarity.flipping) return;
-    setPolarityOffset((polarity.negative ? 5.3 : 2.3) - time);
     play();
   };
 
@@ -75,7 +130,7 @@ export default function App() {
   }, [aboutOpen, toggle, resetScene]);
 
   return (
-    <div className={`cld-page ${playing ? "is-playing" : "is-paused"}`}>
+    <div className={`cld-page ${playing ? "is-playing" : "is-paused"} mode-${loopMode} theme-${colorTheme}`}>
       <div className="scene-wash" aria-hidden="true" />
       <div className="floor-grid" aria-hidden="true" />
 
@@ -110,6 +165,39 @@ export default function App() {
           </h1>
           <p className="hero-chinese">因果回路图<span className="chinese-title-rule" /></p>
           <p className="hero-description">每一个结果，都是下一个原因。</p>
+          <div className="mode-switch">
+            <div className="mode-switch-heading">
+              <span className="mode-switch-label mono">LOOP MODE / 02</span>
+              <span className="mode-switch-current mono">
+                {loopMode === "balancing" ? "B / BALANCING" : "R / REINFORCING"}
+              </span>
+            </div>
+            <div className="mode-switch-options" role="group" aria-label="选择回路模式">
+              <button
+                type="button"
+                className="mode-option"
+                onClick={() => chooseLoopMode("balancing")}
+                aria-pressed={loopMode === "balancing"}
+              >
+                <span className="mode-option-code mono">B</span>
+                <span>平衡回路</span>
+              </button>
+              <button
+                type="button"
+                className="mode-option"
+                onClick={() => chooseLoopMode("reinforcing")}
+                aria-pressed={loopMode === "reinforcing"}
+              >
+                <span className="mode-option-code mono">R</span>
+                <span>增强回路</span>
+              </button>
+            </div>
+            <p key={loopMode} className="mode-switch-note" aria-live="polite" aria-atomic="true">
+              {loopMode === "balancing"
+                ? "负向反馈抵消变化，系统趋向稳定。"
+                : "正向反馈持续放大变化。"}
+            </p>
+          </div>
           <div className="hero-footnote mono" aria-hidden="true">
             <span className="small-arrow"><ArrowUpRight size={17} strokeWidth={1.5} /></span>
             CAUSAL LOOP DIAGRAM
@@ -119,9 +207,10 @@ export default function App() {
         <CausalDiagram
           time={time}
           frames={frames}
-          polarity={polarity}
+          mode={loopMode}
+          modeElapsed={loopMode === "reinforcing" ? Math.max(0, time - modeStartedAt) : 0}
+          negativeEdges={negativeEdges}
           onFlipNode={flipNode}
-          onFlipPolarity={flipPolarity}
         />
       </main>
 
@@ -136,6 +225,21 @@ export default function App() {
         </div>
         <div className="scene-controls">
           <span className="keyboard-hint mono"><kbd>SPACE</kbd> 暂停 / <kbd>R</kbd> 重置</span>
+          <div className="theme-switcher" role="group" aria-label="切换主题颜色">
+            {COLOR_THEMES.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`theme-option theme-option-${option.id}`}
+                onClick={() => setColorTheme(option.id)}
+                aria-label={`切换到${option.label}主题`}
+                aria-pressed={colorTheme === option.id}
+                title={`${option.label}主题`}
+              >
+                <span className="theme-option-swatch" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="play-button"

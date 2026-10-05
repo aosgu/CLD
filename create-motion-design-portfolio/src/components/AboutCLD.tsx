@@ -54,8 +54,8 @@ export default memo(function AboutCLD({ open, onClose }: AboutCLDProps) {
           </div>
         </div>
         <p className="about-note">
-          这是一个抽象示意：三条关系固定为正向，翻转卡片改变第四条关系。
-          全部为正时是增强回路（R）；有一条为负时是平衡回路（B）。
+          平衡模式下，四张卡片成对随机翻转，并始终保持奇数个负号，不会出现全正或全负。
+          切换到增强模式时，所有负号都会翻转为正号。
           立方体翻转只改变展示内容，不改变连线方向。
         </p>
         <button type="button" className="about-return" onClick={onClose}>
