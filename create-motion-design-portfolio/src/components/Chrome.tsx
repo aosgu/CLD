@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  ArrowUpRight,
   Pause,
   Play,
   RotateCcw,
@@ -48,6 +49,13 @@ export function TopBar({ playing }: { playing: boolean }) {
         </span>
       </div>
       <div className="flex items-center gap-4">
+        <a
+          data-hover
+          href="/"
+          className="mono hidden items-center gap-1 text-[10px] tracking-[0.2em] text-white/35 uppercase transition-colors hover:text-[#FF3B1F] md:inline-flex"
+        >
+          CLD PAGE <ArrowUpRight className="h-3 w-3" />
+        </a>
         <span className="mono hidden text-[10px] tracking-[0.25em] text-white/30 uppercase sm:inline">
           Portfolio / 2026
         </span>
