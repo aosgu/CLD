@@ -1084,6 +1084,217 @@ button:disabled {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* ============================================================================
+   Opening unfold
+   One 2s choreography (INTRO_DURATION in App.tsx) that builds the scene —
+   frame, ring, cubes, cards, readouts — and hands it over to the live motion.
+   Two rules keep it safe:
+     1. every animation below ends before the is-intro class is dropped;
+     2. keyframes without an explicit `to` resolve to the element's resting
+        style, so losing the class can never make anything jump.
+   ============================================================================ */
+
+@keyframes page-settle {
+  from { transform: scale(1.032); }
+}
+
+@keyframes intro-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes frame-drop {
+  from { opacity: 0; transform: translateY(-16px); }
+}
+
+@keyframes frame-rise {
+  from { opacity: 0; transform: translateY(18px); }
+}
+
+@keyframes grid-open {
+  from {
+    opacity: 0;
+    transform: perspective(800px) rotateX(78deg) scale(0.82);
+  }
+}
+
+@keyframes guide-open {
+  from { opacity: 0; transform: scale(0.72); }
+}
+
+@keyframes loop-draw {
+  from {
+    opacity: 0.25;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 100;
+  }
+  to {
+    opacity: 1;
+    stroke-dasharray: 100 100;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes arrowhead-pop {
+  from { opacity: 0; transform: scale(0.45); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes node-unfold {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%)
+      translate(var(--intro-shift-x, 0px), var(--intro-shift-y, 0px))
+      scale(0.16);
+  }
+  34% { opacity: 1; }
+}
+
+@keyframes node-caption-rise {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes card-deal {
+  from { opacity: 0; transform: rotateX(-94deg) scale(0.86); }
+  40% { opacity: 1; }
+}
+
+@keyframes card-shadow-in {
+  from { opacity: 0; transform: translate(4px, 11px) scale(0.86); }
+  to { opacity: 0.2; transform: translate(4px, 7px) scale(1); }
+}
+
+@keyframes center-rise-in {
+  from { opacity: 0; transform: translateY(70%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes center-rule-open {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+/* The camera settles back while the frame drops in. */
+.cld-page.is-intro {
+  will-change: transform;
+  animation: page-settle 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .site-header {
+  animation: frame-drop 540ms 40ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .scene-footer {
+  animation: frame-rise 620ms 1280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .floor-grid {
+  animation: grid-open 1020ms 50ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .film-grain {
+  animation: intro-fade-in 620ms 180ms both;
+}
+
+/* The orbit guide opens, then the four arcs draw themselves clockwise. */
+.cld-page.is-intro .orbit-guide {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: guide-open 520ms 90ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .loop-segment:nth-of-type(1) { --intro-delay: 120ms; }
+.cld-page.is-intro .loop-segment:nth-of-type(2) { --intro-delay: 220ms; }
+.cld-page.is-intro .loop-segment:nth-of-type(3) { --intro-delay: 320ms; }
+.cld-page.is-intro .loop-segment:nth-of-type(4) { --intro-delay: 420ms; }
+
+.cld-page.is-intro .loop-arrow {
+  animation: loop-draw 460ms var(--intro-delay, 120ms) cubic-bezier(0.5, 0.05, 0.35, 1) both;
+}
+
+#cld-arrowhead-1 { --intro-delay: 470ms; }
+#cld-arrowhead-2 { --intro-delay: 570ms; }
+#cld-arrowhead-3 { --intro-delay: 670ms; }
+#cld-arrowhead-4 { --intro-delay: 770ms; }
+
+.cld-page.is-intro .loop-arrowhead {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: arrowhead-pop 230ms var(--intro-delay, 470ms) cubic-bezier(0.2, 1.25, 0.4, 1) both;
+}
+
+/* The loop assembles: each cube unfolds from the centre, clockwise. */
+.cld-page.is-intro .node-01 {
+  --intro-shift-y: calc(var(--diagram-size) * 0.3278);
+  --intro-delay: 400ms;
+}
+
+.cld-page.is-intro .node-02 {
+  --intro-shift-x: calc(var(--diagram-size) * -0.3278);
+  --intro-delay: 500ms;
+}
+
+.cld-page.is-intro .node-03 {
+  --intro-shift-y: calc(var(--diagram-size) * -0.3278);
+  --intro-delay: 600ms;
+}
+
+.cld-page.is-intro .node-04 {
+  --intro-shift-x: calc(var(--diagram-size) * 0.3278);
+  --intro-delay: 700ms;
+}
+
+.cld-page.is-intro .node-anchor {
+  animation: node-unfold 660ms var(--intro-delay, 400ms) cubic-bezier(0.22, 1.12, 0.3, 1) both;
+}
+
+.cld-page.is-intro .node-caption {
+  animation: node-caption-rise 500ms calc(var(--intro-delay, 400ms) + 420ms)
+    cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The polarity cards are dealt onto the loop, tipping up out of the plane. */
+.cld-page.is-intro .polarity-anchor-cause-effect { --intro-delay: 740ms; }
+.cld-page.is-intro .polarity-anchor-effect-response { --intro-delay: 810ms; }
+.cld-page.is-intro .polarity-anchor-response-feedback { --intro-delay: 880ms; }
+.cld-page.is-intro .polarity-anchor-feedback-cause { --intro-delay: 950ms; }
+
+.cld-page.is-intro .polarity-static {
+  animation: card-deal 560ms var(--intro-delay, 740ms) cubic-bezier(0.2, 1.1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .polarity-shadow {
+  animation: card-shadow-in 520ms var(--intro-delay, 740ms)
+    cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Centre readout, then the flow starts running through the finished loop. */
+.cld-page.is-intro .loop-type { animation-delay: 900ms; }
+.cld-page.is-intro .loop-name { animation-delay: 980ms; }
+.cld-page.is-intro .loop-effect { animation-delay: 1140ms; }
+
+.cld-page.is-intro .loop-chinese {
+  animation: center-rise-in 500ms 1060ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .loop-center-rule {
+  transform-origin: 50% 50%;
+  animation: center-rule-open 480ms 1000ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cld-page.is-intro .loop-signal {
+  animation: intro-fade-in 450ms 1000ms both;
+}
+
+/* Copy keeps its own entrance, only the beats move into the opening score. */
+.cld-page.is-intro .hero-eyebrow { animation-delay: 100ms; }
+.cld-page.is-intro .hero-title > span { animation-delay: 160ms; }
+.cld-page.is-intro .hero-title > span + span { animation-delay: 260ms; }
+.cld-page.is-intro .hero-chinese { animation-delay: 440ms; }
+.cld-page.is-intro .hero-description { animation-delay: 520ms; }
+.cld-page.is-intro .mode-switch { animation-delay: 600ms; }
+.cld-page.is-intro .hero-footnote { animation-delay: 700ms; }
+
 @media (max-width: 1150px) {
   .keyboard-hint {
     display: none;
