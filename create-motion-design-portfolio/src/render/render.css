@@ -1,0 +1,101 @@
+/* Video stage: a 720x1280 canvas (rendered at 1.5x => 1080x1920) holding only the 3D
+   scene, centred on the plain theme colour. No header, copy, grid or grain. */
+html, body, #root {
+  margin: 0;
+  width: 720px;
+  height: 1280px;
+  overflow: hidden;
+  background: var(--accent, #f64e27);
+}
+
+.cld-page.render-stage {
+  display: grid;
+  place-items: center;
+  width: 720px;
+  height: 1280px;
+  min-height: 0;
+  transition: none;
+}
+
+.render-stage .diagram {
+  --diagram-size: 700px;
+}
+
+/* The page-wide "settle" zoom belongs to the website's intro, not the video. */
+.cld-page.render-stage.is-intro {
+  animation: none;
+}
+
+/* ---- Ending -------------------------------------------------------------- */
+.render-stage .end-hole,
+.render-stage .end-black {
+  position: absolute;
+  z-index: 40;
+  pointer-events: none;
+  border-radius: 50%;
+  background: #000;
+  opacity: 0;
+}
+
+.render-stage .end-hole {
+  top: 50%;
+  left: 50%;
+  width: var(--hole-size, 0px);
+  height: var(--hole-size, 0px);
+  transform: translate(-50%, -50%);
+}
+
+.render-stage .end-black {
+  inset: 0;
+  border-radius: 0;
+}
+
+.render-stage.is-outro .end-hole { opacity: var(--hole-alpha, 0); }
+.render-stage.is-outro .end-black { opacity: var(--black-alpha, 0); }
+
+.render-stage.is-outro .loop-center,
+.render-stage.is-outro .orbit-guide,
+.render-stage.is-outro .loop-signal,
+.render-stage.is-outro .node-caption,
+.render-stage.is-outro .node-shadow {
+  opacity: calc(1 - var(--out-fade, 0));
+}
+
+.render-stage.is-outro .loop-arrow {
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: calc(100 * var(--out-arrow, 0));
+}
+
+.render-stage.is-outro .loop-arrowhead {
+  opacity: calc(1 - var(--out-arrow, 0) * 3);
+}
+
+.render-stage.is-outro .polarity-anchor {
+  scale: calc(1 - var(--out-fade, 0));
+  opacity: calc(1 - var(--out-fade, 0));
+}
+
+/* Cubes travel from their post to the centre of the loop (0.3278 * diagram size
+   is the distance of each cube from the centre). */
+.render-stage.is-outro .node-01 { --dx: 0; --dy: 0.3278; --i: 1; }
+.render-stage.is-outro .node-02 { --dx: -0.3278; --dy: 0; --i: 2; }
+.render-stage.is-outro .node-03 { --dx: 0; --dy: -0.3278; --i: 3; }
+.render-stage.is-outro .node-04 { --dx: 0.3278; --dy: 0; --i: 4; }
+
+.render-stage.is-outro .node-anchor {
+  translate: calc(var(--dx) * var(--p) * var(--diagram-size)) calc(var(--dy) * var(--p) * var(--diagram-size));
+  scale: var(--s);
+  opacity: var(--a);
+}
+
+.render-stage.is-outro .node-01 { --p: var(--out-move-1); --s: var(--out-scale-1); --a: var(--out-alpha-1); }
+.render-stage.is-outro .node-02 { --p: var(--out-move-2); --s: var(--out-scale-2); --a: var(--out-alpha-2); }
+.render-stage.is-outro .node-03 { --p: var(--out-move-3); --s: var(--out-scale-3); --a: var(--out-alpha-3); }
+.render-stage.is-outro .node-04 { --p: var(--out-move-4); --s: var(--out-scale-4); --a: var(--out-alpha-4); }
+
+/* During the ending every value is driven per frame, so CSS transitions must not lag
+   behind it. */
+.render-stage.is-outro,
+.render-stage.is-outro * {
+  transition: none !important;
+}

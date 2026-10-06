@@ -367,6 +367,31 @@ button:disabled {
   color: var(--ink);
 }
 
+.example-switch {
+  margin-top: 22px;
+}
+
+.example-switch + .mode-switch {
+  margin-top: 16px;
+}
+
+.example-switch .mode-option {
+  min-height: 38px;
+}
+
+/* A mode fixed by the chosen example stays visible but can't be changed. */
+.mode-option:disabled {
+  cursor: not-allowed;
+}
+
+.mode-option:disabled:not([aria-pressed="true"]) {
+  opacity: 0.4;
+}
+
+.mode-option:disabled:hover .mode-option-code {
+  transform: none;
+}
+
 .mode-switch-note {
   margin: 8px 0 0;
   color: #191a15a3;
@@ -588,6 +613,21 @@ button:disabled {
 .face-word-stacked {
   font-size: calc(var(--cube-size) * 0.224);
   line-height: 0.86;
+}
+
+/* Single-glyph cubes (instances): one bold character in the theme colour. */
+.face-word-glyph {
+  margin-top: calc(var(--cube-size) * -0.06);
+  color: var(--accent);
+  font-size: calc(var(--cube-size) * 0.5);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  transition: color 700ms ease;
+}
+
+.face-word-glyph .face-rule {
+  margin-top: calc(var(--cube-size) * 0.05);
 }
 
 .face-rule {
@@ -1293,6 +1333,7 @@ button:disabled {
 .cld-page.is-intro .hero-chinese { animation-delay: 440ms; }
 .cld-page.is-intro .hero-description { animation-delay: 520ms; }
 .cld-page.is-intro .mode-switch { animation-delay: 600ms; }
+.cld-page.is-intro .example-switch + .mode-switch { animation-delay: 650ms; }
 .cld-page.is-intro .hero-footnote { animation-delay: 700ms; }
 
 @media (max-width: 1150px) {
@@ -1547,8 +1588,10 @@ button:disabled {
     margin-top: 16px;
   }
 
-  .mode-switch {
-    margin-top: 14px;
+  .mode-switch,
+  .example-switch,
+  .example-switch + .mode-switch {
+    margin-top: 12px;
   }
 
   .mode-switch-options {

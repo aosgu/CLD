@@ -31,6 +31,8 @@ export interface LoopNode {
   chinese: string;
   x: number;
   y: number;
+  /** When set, the cube shows this single glyph in bold, in the theme colour. */
+  glyph?: string;
   faces: CubeFace[];
 }
 
@@ -94,6 +96,81 @@ export const LOOP_NODES: LoopNode[] = [
       { word: "BALANCE", chinese: "平衡", caption: "反馈，可以放大变化，也可以调节变化。" },
       { word: "REPEAT", chinese: "重复", caption: "不是简单重复，而是持续相互影响。" },
     ],
+  },
+];
+
+export type ExampleId = "general" | "gut-glucose";
+
+export interface LoopExample {
+  id: ExampleId;
+  /** Short label for the example switch. */
+  label: string;
+  /** Single character shown in the switch badge. */
+  badge: string;
+  /** Short English label for the example switch heading. */
+  code: string;
+  nodes: LoopNode[];
+  /** Screen-reader sentence naming the four nodes (top, right, bottom, left). */
+  nodeSummary: string;
+  /** Loop mode forced by the example; null leaves the choice to the user. */
+  lockedMode: LoopMode | null;
+  /** Line under the centre readout (per loop mode). */
+  centerEffect: Record<LoopMode, string>;
+  /** Note shown under the mode switch when the mode is locked. */
+  lockedNote?: string;
+}
+
+// Every face of a cube carries the same glyph, so a flip never changes the
+// meaning of a node; it only changes the viewing angle.
+const glyphNode = (
+  id: string,
+  base: Pick<LoopNode, "x" | "y">,
+  glyph: string,
+  name: string,
+  chinese: string,
+  caption: string,
+): LoopNode => ({
+  id,
+  name,
+  chinese,
+  x: base.x,
+  y: base.y,
+  glyph,
+  faces: Array.from({ length: 6 }, () => ({ word: glyph, chinese, caption })),
+});
+
+const GUT_GLUCOSE_NODES: LoopNode[] = [
+  glyphNode("01", LOOP_NODES[0], "肠", "Gut", "肠道",
+    "肠道屏障受损、菌群失调，内毒素渗入血液。"),
+  glyphNode("02", LOOP_NODES[1], "炎", "Inflammation", "炎症",
+    "内毒素激活免疫，慢性低度炎症持续升高。"),
+  glyphNode("03", LOOP_NODES[2], "胰", "Insulin Resistance", "胰岛素抵抗",
+    "炎症因子干扰胰岛素信号，细胞对胰岛素不再敏感。"),
+  glyphNode("04", LOOP_NODES[3], "糖", "Hyperglycemia", "高血糖",
+    "血糖升高，反过来损伤肠道屏障、扰乱菌群。"),
+];
+
+export const LOOP_EXAMPLES: LoopExample[] = [
+  {
+    id: "general",
+    label: "通用",
+    badge: "通",
+    code: "GENERIC",
+    nodes: LOOP_NODES,
+    nodeSummary: "原因、影响、响应和反馈",
+    lockedMode: null,
+    centerEffect: { balancing: "反馈抵消变化", reinforcing: "反馈放大变化" },
+  },
+  {
+    id: "gut-glucose",
+    label: "肠道-血糖",
+    badge: "肠",
+    code: "GUT-GLUCOSE",
+    nodes: GUT_GLUCOSE_NODES,
+    nodeSummary: "肠道、炎症、胰岛素抵抗和高血糖",
+    lockedMode: "reinforcing",
+    centerEffect: { balancing: "肠道—血糖恶性循环", reinforcing: "肠道—血糖恶性循环" },
+    lockedNote: "四个关系均为正向，所以这是一个增强回路（恶性循环）。",
   },
 ];
 

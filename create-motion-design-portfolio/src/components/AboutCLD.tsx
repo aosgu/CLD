@@ -58,6 +58,10 @@ export default memo(function AboutCLD({ open, onClose }: AboutCLDProps) {
           切换到增强模式时，所有负号都会翻转为正号。
           立方体翻转只改变展示内容，不改变连线方向。
         </p>
+        <p className="about-note">
+          实例“肠道-血糖”：肠（肠道）→ 炎（炎症）→ 胰（胰岛素抵抗）→ 糖（高血糖）→ 肠，
+          四个关系均为正向，构成一个增强回路——高血糖又会进一步损伤肠道，形成恶性循环。
+        </p>
         <button type="button" className="about-return" onClick={onClose}>
           回到回路 <ArrowUpRight size={17} />
         </button>
