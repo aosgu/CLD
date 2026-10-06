@@ -64,7 +64,7 @@ export default function CubeNode({ node, index, frame, time, onFlip }: CubeNodeP
             >
               {node.faces.map((item, faceIndex) => (
                 <span
-                  key={item.word}
+                  key={faceIndex}
                   className="cube-face"
                   style={{
                     transform: FACE_TRANSFORMS[faceIndex],
@@ -75,7 +75,13 @@ export default function CubeNode({ node, index, frame, time, onFlip }: CubeNodeP
                     <span>{node.id}.{faceIndex + 1}</span>
                     <span className="face-corner" />
                   </span>
-                  <span className={`face-word ${item.word.includes("\n") ? "face-word-stacked" : ""}`}>
+                  <span
+                    className={[
+                      "face-word",
+                      node.glyph ? "face-word-glyph" : "",
+                      item.word.includes("\n") ? "face-word-stacked" : "",
+                    ].filter(Boolean).join(" ")}
+                  >
                     {item.word}
                     <span className="face-rule" />
                   </span>
@@ -89,7 +95,7 @@ export default function CubeNode({ node, index, frame, time, onFlip }: CubeNodeP
         <span className="mono node-number">{node.id} /</span>
         <span className="node-caption-mask">
           <span key={`${frame.eventId}:${frame.face}`} className="node-caption-word">
-            {face.chinese}
+            {node.glyph ? node.name : face.chinese}
           </span>
         </span>
       </div>

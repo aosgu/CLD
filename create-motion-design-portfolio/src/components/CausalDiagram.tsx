@@ -1,5 +1,5 @@
 import type { CubeFrame, LoopMode } from "../lib/cldMotion";
-import { LOOP_NODES } from "../lib/cldMotion";
+import type { LoopExample } from "../lib/cldMotion";
 import CubeNode from "./CubeNode";
 
 const arc = (start: number, end: number) => {
@@ -45,6 +45,7 @@ function PolarityFaces({ negative }: { negative: boolean }) {
 interface CausalDiagramProps {
   time: number;
   frames: CubeFrame[];
+  example: LoopExample;
   mode: LoopMode;
   modeElapsed: number;
   negativeEdges: boolean[];
@@ -52,14 +53,14 @@ interface CausalDiagramProps {
 }
 
 export default function CausalDiagram({
-  time, frames, mode, modeElapsed, negativeEdges, onFlipNode,
+  time, frames, example, mode, modeElapsed, negativeEdges, onFlipNode,
 }: CausalDiagramProps) {
   const signalTravel = mode === "reinforcing" ? acceleratedTravel(modeElapsed) : time * 23;
 
   return (
     <section className="diagram-region" aria-label="交互式三维因果回路图">
       <p className="sr-only">
-        原因、影响、响应和反馈四个黑色立方体，分别位于上、右、下、左。
+        {example.nodeSummary}四个黑色立方体，分别位于上、右、下、左。
         四条箭头按顺时针方向连成一个回路，每条连线上都有一张只显示正号或负号的极性卡片。
         平衡回路中卡片成对随机翻转并保持奇数个负号；增强回路中所有关系均为正向。
         点击立方体可改变展示视角。
@@ -119,13 +120,13 @@ export default function CausalDiagram({
           <span key={`${mode}-chinese`} className="loop-chinese">
             {mode === "balancing" ? "平衡回路" : "增强回路"}
           </span>
-          <span key={`${mode}-effect`} className="loop-effect">
-            {mode === "balancing" ? "反馈抵消变化" : "反馈放大变化"}
+          <span key={`${example.id}-${mode}-effect`} className="loop-effect">
+            {example.centerEffect[mode]}
           </span>
           <span className="loop-center-rule" />
         </div>
 
-        {LOOP_NODES.map((node, index) => (
+        {example.nodes.map((node, index) => (
           <CubeNode
             key={node.id}
             node={node}

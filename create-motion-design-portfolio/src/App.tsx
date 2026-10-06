@@ -3,7 +3,9 @@ import { ArrowUpRight, Pause, Play, RotateCcw } from "lucide-react";
 import CausalDiagram from "./components/CausalDiagram";
 import AboutCLD from "./components/AboutCLD";
 import { useSceneClock } from "./hooks/useSceneClock";
-import { CubeTimeline, LOOP_NODES, type LoopMode } from "./lib/cldMotion";
+import {
+  CubeTimeline, LOOP_EXAMPLES, LOOP_NODES, type ExampleId, type LoopMode,
+} from "./lib/cldMotion";
 
 const createTimelines = () => LOOP_NODES.map((_, index) => new CubeTimeline(index));
 
@@ -53,6 +55,7 @@ export default function App() {
   const [introRun, setIntroRun] = useState(0);
   const [introFinished, setIntroFinished] = useState(false);
   const [loopMode, setLoopMode] = useState<LoopMode>("balancing");
+  const [exampleId, setExampleId] = useState<ExampleId>("general");
   const [colorTheme, setColorTheme] = useState<ColorTheme>("orange");
   const [modeStartedAt, setModeStartedAt] = useState(0);
   const [negativeEdges, setNegativeEdges] = useState<boolean[]>(createBalancingPolarities);
@@ -73,29 +76,50 @@ export default function App() {
     if (metaThemeColor && selectedTheme) metaThemeColor.content = selectedTheme.color;
   }, [colorTheme]);
 
+  const example = LOOP_EXAMPLES.find((item) => item.id === exampleId) ?? LOOP_EXAMPLES[0];
+  const modeLocked = example.lockedMode !== null;
+
   const frames = timelines.map((timeline) => timeline.sample(time));
   const activeIndex = frames.reduce(
     (latest, frame, index) => frame.eventAt > frames[latest].eventAt ? index : latest,
     0,
   );
-  const activeNode = LOOP_NODES[activeIndex];
+  const activeNode = example.nodes[activeIndex];
   const activeFrame = frames[activeIndex];
   const activeFace = activeNode.faces[activeFrame.face];
 
   const resetScene = useCallback(() => {
     setTimelines(createTimelines());
-    setLoopMode("balancing");
+    const nextMode = example.lockedMode ?? "balancing";
+    setLoopMode(nextMode);
     setModeStartedAt(0);
-    setNegativeEdges(createBalancingPolarities());
+    setNegativeEdges(
+      nextMode === "reinforcing" ? createReinforcingPolarities() : createBalancingPolarities(),
+    );
     // Set the flag in the same batch as the new key so the reset never shows a
     // frame of the finished scene before the unfold replays.
     setIntroFinished(false);
     setIntroRun((run) => run + 1);
     restart();
-  }, [restart]);
+  }, [restart, example]);
+
+  const chooseExample = (nextId: ExampleId) => {
+    if (nextId === exampleId) return;
+    const next = LOOP_EXAMPLES.find((item) => item.id === nextId);
+    if (!next) return;
+    setExampleId(nextId);
+    // An example may fix the loop mode (e.g. all-positive links are a R loop);
+    // leaving it restores the default balancing loop.
+    const nextMode = next.lockedMode ?? "balancing";
+    if (nextMode !== loopMode) setModeStartedAt(time);
+    setLoopMode(nextMode);
+    setNegativeEdges(
+      nextMode === "reinforcing" ? createReinforcingPolarities() : createBalancingPolarities(),
+    );
+  };
 
   const chooseLoopMode = (nextMode: LoopMode) => {
-    if (nextMode === loopMode) return;
+    if (modeLocked || nextMode === loopMode) return;
     setLoopMode(nextMode);
     setModeStartedAt(time);
     setNegativeEdges(
@@ -156,6 +180,7 @@ export default function App() {
         playing ? "is-playing" : "is-paused",
         ...(introFinished ? [] : ["is-intro"]),
         `mode-${loopMode}`,
+        `example-${exampleId}`,
         `theme-${colorTheme}`,
       ].join(" ")}
     >
@@ -193,6 +218,26 @@ export default function App() {
           </h1>
           <p className="hero-chinese">因果回路图<span className="chinese-title-rule" /></p>
           <p className="hero-description">每一个结果，都是下一个原因。</p>
+          <div className="mode-switch example-switch">
+            <div className="mode-switch-heading">
+              <span className="mode-switch-label mono">EXAMPLE / 实例</span>
+              <span className="mode-switch-current mono">{example.code}</span>
+            </div>
+            <div className="mode-switch-options" role="group" aria-label="选择实例">
+              {LOOP_EXAMPLES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="mode-option"
+                  onClick={() => chooseExample(item.id)}
+                  aria-pressed={exampleId === item.id}
+                >
+                  <span className="mode-option-code mono">{item.badge}</span>
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mode-switch">
             <div className="mode-switch-heading">
               <span className="mode-switch-label mono">LOOP MODE / 02</span>
@@ -205,6 +250,7 @@ export default function App() {
                 type="button"
                 className="mode-option"
                 onClick={() => chooseLoopMode("balancing")}
+                disabled={modeLocked}
                 aria-pressed={loopMode === "balancing"}
               >
                 <span className="mode-option-code mono">B</span>
@@ -214,16 +260,17 @@ export default function App() {
                 type="button"
                 className="mode-option"
                 onClick={() => chooseLoopMode("reinforcing")}
+                disabled={modeLocked}
                 aria-pressed={loopMode === "reinforcing"}
               >
                 <span className="mode-option-code mono">R</span>
                 <span>增强回路</span>
               </button>
             </div>
-            <p key={loopMode} className="mode-switch-note" aria-live="polite" aria-atomic="true">
-              {loopMode === "balancing"
+            <p key={`${exampleId}-${loopMode}`} className="mode-switch-note" aria-live="polite" aria-atomic="true">
+              {example.lockedNote ?? (loopMode === "balancing"
                 ? "负向反馈抵消变化，系统趋向稳定。"
-                : "正向反馈持续放大变化。"}
+                : "正向反馈持续放大变化。")}
             </p>
           </div>
           <div className="hero-footnote mono" aria-hidden="true">
@@ -235,6 +282,7 @@ export default function App() {
         <CausalDiagram
           time={time}
           frames={frames}
+          example={example}
           mode={loopMode}
           modeElapsed={loopMode === "reinforcing" ? Math.max(0, time - modeStartedAt) : 0}
           negativeEdges={negativeEdges}
